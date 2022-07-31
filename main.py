@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+admin = int(os.getenv('ADMIN'))
 REQUEST_CITY, TEST1, CHOOSING_MAIN, CHOOSING_WEATHER, CHOOSING_NOTIF, CHOOSING_SETTINGS = 1, 2, 3, 4, 5, 6
 
 
@@ -32,7 +33,7 @@ def city_name(update, context):
         update.message.reply_text(text='Отлично! Город сохранён, при необходимости его всегда можно поменять '
                                        'в "Настройках" ---> \U00002699')
         with open('text_for_tests.txt', 'a', encoding='utf-8') as file:
-            file.write(f'{update.message.chat.id} ---------- {coord} ---------- {city}\n')
+            file.write(f'{update.message.chat.id}----------{coord["lon"]}----------{coord["lat"]}----------{city}\n')
         file.close()
         print(dp.handlers)
         keyboard = [['Погода \U000026C5'], ['Уведомления \U0001F514'], ['Настройки \U00002699']]
@@ -53,22 +54,24 @@ def test_2(update, context):
 
 
 def start(update, context):
+    global admin
     print(update.message.chat.id)
-    if not check_users_in_db(update.message.chat.id):
-        keyboard_location = KeyboardButton(text='Отправить местоположение', request_location=True)
-        keyboard_ask_city = [[keyboard_location, 'Указать город']]
-        markup_ask_city = ReplyKeyboardMarkup(keyboard_ask_city)
-        update.message.reply_text(text='Привет! Отправьте своё местоположение или название города, что бы я показывал '
-                                       'погоду в правильном месте', reply_markup=markup_ask_city)
-        # dp.add_handler(MessageHandler(Filters.location | Filters.regex('^Указать город$'),
-        #                               test_2), group=1)
-        return REQUEST_CITY
-    else:
-        keyboard = [['Погода \U000026C5'], ['Уведомления \U0001F514'], ['Настройки \U00002699']]
-        markup = ReplyKeyboardMarkup(keyboard)
-        update.message.reply_text(text='Что тебя интересует?', reply_markup=markup)
-        print(dp.handlers)
-        return CHOOSING_MAIN
+    if update.message.chat.id == admin:
+        if not check_users_in_db(update.message.chat.id):
+            keyboard_location = KeyboardButton(text='Отправить местоположение', request_location=True)
+            keyboard_ask_city = [[keyboard_location, 'Указать город']]
+            markup_ask_city = ReplyKeyboardMarkup(keyboard_ask_city)
+            update.message.reply_text(text='Привет! Отправьте своё местоположение или название города, что бы я показывал '
+                                           'погоду в правильном месте', reply_markup=markup_ask_city)
+            # dp.add_handler(MessageHandler(Filters.location | Filters.regex('^Указать город$'),
+            #                               test_2), group=1)
+            return REQUEST_CITY
+        else:
+            keyboard = [['Погода \U000026C5'], ['Уведомления \U0001F514'], ['Настройки \U00002699']]
+            markup = ReplyKeyboardMarkup(keyboard)
+            update.message.reply_text(text='Что тебя интересует?', reply_markup=markup)
+            print(dp.handlers)
+            return CHOOSING_MAIN
 
 
 def weather_func(update, context):
@@ -114,7 +117,11 @@ if __name__ == '__main__':
         pass_user_data=True)], states={
         CHOOSING_WEATHER: [MessageHandler(Filters.regex('^Погода на сегодня$') & ~Filters.command,
                                           work_class.weather_today,
-                                          pass_user_data=True)]
+                                          pass_user_data=True),
+                           MessageHandler(Filters.regex('^Погода на завтра$') & ~Filters.command,
+                                          work_class.weather_tomorrow,
+                                          pass_user_data=True)
+                           ]
     }, fallbacks=[MessageHandler(Filters.regex('^Назад$') & ~Filters.command, start,
                   pass_user_data=True)],
        map_to_parent={
