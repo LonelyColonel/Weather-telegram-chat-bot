@@ -16,7 +16,6 @@ REQUEST_CITY, TEST1, CHOOSING_MAIN, CHOOSING_WEATHER, CHOOSING_NOTIF, CHOOSING_S
 def check_users_in_db(id_user):
     with open('text_for_tests.txt', 'r', encoding='utf-8') as file:
         users = file.readlines()
-    print(users)
     for user in users:
         if str(id_user) in user:
             return True
@@ -35,7 +34,6 @@ def city_name(update, context):
         with open('text_for_tests.txt', 'a', encoding='utf-8') as file:
             file.write(f'{update.message.chat.id}----------{coord["lon"]}----------{coord["lat"]}----------{city}\n')
         file.close()
-        print(dp.handlers)
         keyboard = [['Погода \U000026C5'], ['Уведомления \U0001F514'], ['Настройки \U00002699']]
         markup = ReplyKeyboardMarkup(keyboard)
         update.message.reply_text(text='Что тебя интересует?', reply_markup=markup)
@@ -43,14 +41,24 @@ def city_name(update, context):
 
 
 def test_2(update, context):
-    # dp.handlers[1].clear()
-    print(update.message.location)
-    print(update)
-    print(dp.handlers)
     if update.message.location is None:
         update.message.reply_text(text='Напишите название города:')
-        # dp.add_handler(MessageHandler(Filters.text, city_name), group=1)
         return TEST1
+    else:
+        print(update.message.location)
+        coord = update.message.location
+        print(type(coord["longitude"]))
+        city = work_class.get_name_city_by_coords(str(coord["longitude"]), str(coord["latitude"]))
+        update.message.reply_text(text='Отлично! Координаты сохранены, при необходимости их всегда можно поменять '
+                                       'в "Настройках" ---> \U00002699')
+
+        with open('text_for_tests.txt', 'a', encoding='utf-8') as file:
+            file.write(f'{update.message.chat.id}----------{coord["longitude"]}----------{coord["latitude"]}----------{city}\n')
+        file.close()
+        keyboard = [['Погода \U000026C5'], ['Уведомления \U0001F514'], ['Настройки \U00002699']]
+        markup = ReplyKeyboardMarkup(keyboard)
+        update.message.reply_text(text='Что тебя интересует?', reply_markup=markup)
+        return CHOOSING_MAIN
 
 
 def start(update, context):
@@ -61,8 +69,9 @@ def start(update, context):
             keyboard_location = KeyboardButton(text='Отправить местоположение', request_location=True)
             keyboard_ask_city = [[keyboard_location, 'Указать город']]
             markup_ask_city = ReplyKeyboardMarkup(keyboard_ask_city)
-            update.message.reply_text(text='Привет! Отправьте своё местоположение или название города, что бы я показывал '
-                                           'погоду в правильном месте', reply_markup=markup_ask_city)
+            update.message.reply_text(text='Привет! Отправьте своё местоположение или название '
+                                           'города, что бы я показывал погоду в правильном месте',
+                                      reply_markup=markup_ask_city)
             # dp.add_handler(MessageHandler(Filters.location | Filters.regex('^Указать город$'),
             #                               test_2), group=1)
             return REQUEST_CITY
@@ -70,12 +79,13 @@ def start(update, context):
             keyboard = [['Погода \U000026C5'], ['Уведомления \U0001F514'], ['Настройки \U00002699']]
             markup = ReplyKeyboardMarkup(keyboard)
             update.message.reply_text(text='Что тебя интересует?', reply_markup=markup)
+            # update.message.reply_html(text='')
             print(dp.handlers)
             return CHOOSING_MAIN
 
 
 def weather_func(update, context):
-    keyboard_weather_func = [['Погода на сегодня', 'Погода на завтра'], ['Погода на 5 дней', 'Погода на 10 дней'],
+    keyboard_weather_func = [['Погода на сегодня', 'Погода на завтра'], ['Погода на 5 дней'],
                              ['Назад']]
     murkup_weather_func = ReplyKeyboardMarkup(keyboard_weather_func)
     update.message.reply_text(text='Выбери что тебе нужно:', reply_markup=murkup_weather_func)
