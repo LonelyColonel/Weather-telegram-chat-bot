@@ -6,7 +6,6 @@ from telegram import ReplyKeyboardMarkup, ForceReply, KeyboardButton, Bot
 from weather_class import Weather
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
 admin = int(os.getenv('ADMIN'))
