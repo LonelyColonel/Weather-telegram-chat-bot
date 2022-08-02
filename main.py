@@ -1,14 +1,11 @@
 import os
 import logging
-
 from telegram.ext import CommandHandler, MessageHandler, Updater, Filters, ConversationHandler, run_async
 from telegram import ReplyKeyboardMarkup, ForceReply, KeyboardButton, Bot
 from weather_class import Weather
 from dotenv import load_dotenv
 
-
 load_dotenv()
-
 admin = int(os.getenv('ADMIN'))
 REQUEST_CITY, TEST1, CHOOSING_MAIN, CHOOSING_WEATHER, CHOOSING_NOTIF, CHOOSING_SETTINGS = 1, 2, 3, 4, 5, 6
 
