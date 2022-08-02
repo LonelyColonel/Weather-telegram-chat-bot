@@ -1,11 +1,14 @@
 import os
 import logging
+
 from telegram.ext import CommandHandler, MessageHandler, Updater, Filters, ConversationHandler, run_async
 from telegram import ReplyKeyboardMarkup, ForceReply, KeyboardButton, Bot
 from weather_class import Weather
 from dotenv import load_dotenv
 
+
 load_dotenv()
+
 admin = int(os.getenv('ADMIN'))
 REQUEST_CITY, TEST1, CHOOSING_MAIN, CHOOSING_WEATHER, CHOOSING_NOTIF, CHOOSING_SETTINGS = 1, 2, 3, 4, 5, 6
 
@@ -37,6 +40,7 @@ def city_name(update, context):
         return CHOOSING_MAIN
 
 
+# TODO: переименовать функцию
 def test_2(update, context):
     if update.message.location is None:
         update.message.reply_text(text='Напишите название города:')
@@ -49,6 +53,7 @@ def test_2(update, context):
         update.message.reply_text(text='Отлично! Координаты сохранены, при необходимости их всегда можно поменять '
                                        'в "Настройках" ---> \U00002699')
 
+        # TODO: вынести это в отдельную функцию
         with open('text_for_tests.txt', 'a', encoding='utf-8') as file:
             file.write(f'{update.message.chat.id}----------{coord["longitude"]}----------{coord["latitude"]}----------{city}\n')
         file.close()
