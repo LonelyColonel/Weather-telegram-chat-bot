@@ -5,25 +5,41 @@ from telegram.ext import CommandHandler, MessageHandler, Updater, Filters, Conve
 from telegram import ReplyKeyboardMarkup, ForceReply, KeyboardButton, Bot
 from weather_class import Weather
 from dotenv import load_dotenv
+from data import db_session
+from data.users import User
 
 load_dotenv()
 
 
 admin = int(os.getenv('ADMIN'))
-REQUEST_CITY, TEST1, CHOOSING_MAIN, CHOOSING_WEATHER, CHOOSING_NOTIF, CHOOSING_SETTINGS = 1, 2, 3, 4, 5, 6
+REQUEST_CITY, NAME_CITY, CHOOSING_MAIN, CHOOSING_WEATHER, CHOOSING_NOTIF, CHOOSING_SETTINGS = 1, 2, 3, 4, 5, 6
 
 
 def check_users_in_db(id_user):
-    with open('text_for_tests.txt', 'r', encoding='utf-8') as file:
-        users = file.readlines()
-    for user in users:
-        if str(id_user) in user:
-            return True
+    global db_session
+    db_session.global_init(f'root:{os.getenv("PASSWORD_DATABASE")}@127.0.0.1:3306/weather_bot_db')
+    session = db_session.create_session()
+    user = session.query(User).filter(User.telegram_id == id_user).first()
+    if user:
+        session.close()
+        return True
     return False
 
 
+def write_in_db(id_user, city, lon, lat):
+    db_session.global_init(f'root:{os.getenv("PASSWORD_DATABASE")}@127.0.0.1:3306/weather_bot_db')
+    session = db_session.create_session()
+    user = User()
+    user.telegram_id = id_user
+    user.city = city
+    user.lon = lon
+    user.lat = lat
+
+    session.add(user)
+    session.commit()
+
+
 def city_name(update, context):
-    # dp.handlers[1].clear()
     city = update.message.text
     coord = work_class.check_city(city)
     if not coord:
@@ -31,20 +47,19 @@ def city_name(update, context):
     else:
         update.message.reply_text(text='Отлично! Город сохранён, при необходимости его всегда можно поменять '
                                        'в "Настройках" ---> \U00002699')
-        with open('text_for_tests.txt', 'a', encoding='utf-8') as file:
-            file.write(f'{update.message.chat.id}----------{coord["lon"]}----------{coord["lat"]}----------{city}\n')
-        file.close()
+
+        write_in_db(update.message.chat.id, city, str(coord["lon"]), str(coord["lat"]))
+
         keyboard = [['Погода \U000026C5'], ['Уведомления \U0001F514'], ['Настройки \U00002699']]
         markup = ReplyKeyboardMarkup(keyboard)
         update.message.reply_text(text='Что тебя интересует?', reply_markup=markup)
         return CHOOSING_MAIN
 
 
-# TODO: переименовать функцию
-def test_2(update, context):
+def for_get_location_or_city(update, context):
     if update.message.location is None:
         update.message.reply_text(text='Напишите название города:')
-        return TEST1
+        return NAME_CITY
     else:
         print(update.message.location)
         coord = update.message.location
@@ -53,10 +68,8 @@ def test_2(update, context):
         update.message.reply_text(text='Отлично! Координаты сохранены, при необходимости их всегда можно поменять '
                                        'в "Настройках" ---> \U00002699')
 
-        # TODO: вынести это в отдельную функцию
-        with open('text_for_tests.txt', 'a', encoding='utf-8') as file:
-            file.write(f'{update.message.chat.id}----------{coord["longitude"]}----------{coord["latitude"]}----------{city}\n')
-        file.close()
+        write_in_db(update.message.chat.id, city, str(coord["longitude"]), str(coord["latitude"]))
+
         keyboard = [['Погода \U000026C5'], ['Уведомления \U0001F514'], ['Настройки \U00002699']]
         markup = ReplyKeyboardMarkup(keyboard)
         update.message.reply_text(text='Что тебя интересует?', reply_markup=markup)
@@ -74,8 +87,6 @@ def start(update, context):
             update.message.reply_text(text='Привет! Отправьте своё местоположение или название '
                                            'города, что бы я показывал погоду в правильном месте',
                                       reply_markup=markup_ask_city)
-            # dp.add_handler(MessageHandler(Filters.location | Filters.regex('^Указать город$'),
-            #                               test_2), group=1)
             return REQUEST_CITY
         else:
             keyboard = [['Погода \U000026C5'], ['Уведомления \U0001F514'], ['Настройки \U00002699']]
@@ -110,7 +121,7 @@ def settings_func(update, context):
     return CHOOSING_SETTINGS
 
 
-def test(update, context):
+def in_dev(update, context):
     update.message.reply_text(text='Данный раздел пока в разработке.... \U0001F6A7 \U0001F6B7 \U000026A0 \U000026D4')
 
 
@@ -143,7 +154,7 @@ if __name__ == '__main__':
     conv_handler_2 = ConversationHandler(entry_points=[MessageHandler(
         Filters.regex('^Уведомления \U0001F514$') & ~Filters.command, notifications_func,
         pass_user_data=True)], states={
-        CHOOSING_NOTIF: [MessageHandler(Filters.regex('^Каждый час$') & ~Filters.command, test,
+        CHOOSING_NOTIF: [MessageHandler(Filters.regex('^Каждый час$') & ~Filters.command, in_dev,
                                         pass_user_data=True)]
     }, fallbacks=[MessageHandler(Filters.regex('^Назад$') & ~Filters.command, start,
                                  pass_user_data=True)],
@@ -155,7 +166,7 @@ if __name__ == '__main__':
         Filters.regex('^Настройки \U00002699$') & ~Filters.command, settings_func,
         pass_user_data=True)], states={
         CHOOSING_SETTINGS: [MessageHandler(Filters.regex('^Отключить все уведомления$') & ~Filters.command,
-                                           test,
+                                           in_dev,
                                            pass_user_data=True)]
     }, fallbacks=[MessageHandler(Filters.regex('^Назад$') & ~Filters.command, start,
                                  pass_user_data=True)],
@@ -164,8 +175,8 @@ if __name__ == '__main__':
        })
 
     conv_handler = ConversationHandler(entry_points=[CommandHandler('start', start)], states={
-        REQUEST_CITY: [MessageHandler(Filters.location | Filters.regex('^Указать город$'), test_2)],
-        TEST1: [MessageHandler(Filters.text, city_name)],
+        REQUEST_CITY: [MessageHandler(Filters.location | Filters.regex('^Указать город$'), for_get_location_or_city)],
+        NAME_CITY: [MessageHandler(Filters.text, city_name)],
         CHOOSING_MAIN: [conv_handler_1,
                         conv_handler_2,
                         conv_handler_3
@@ -173,11 +184,5 @@ if __name__ == '__main__':
     }, fallbacks=[CommandHandler('stop', stop)], allow_reentry=True)
 
     dp.add_handler(conv_handler)
-    # print(dp.handlers)
-    # dp.add_handler(CommandHandler('start', start))
-    # dp.add_handler(MessageHandler(Filters.regex('^Погода \U000026C5$'), weather_func))
-    # dp.add_handler(MessageHandler(Filters.regex('^Назад$'), start))
-    # dp.add_handler(MessageHandler(Filters.regex('^Уведомления \U0001F514$'), notifications_func))
-    # dp.add_handler(MessageHandler(Filters.regex('^Настройки \U00002699$'), settings_func))
     updater.start_polling(timeout=600)
     updater.idle()

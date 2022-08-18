@@ -4,21 +4,21 @@ import requests
 import json
 from telegram.ext import CommandHandler, MessageHandler, Updater, Filters, ConversationHandler, run_async
 from telegram import ReplyKeyboardMarkup, ForceReply
+from data import db_session
+from data.users import User
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
 def get_usr_coord(user_id: int):
-    with open('text_for_tests.txt', 'r', encoding='utf-8') as file:
-        users = file.readlines()
-        file.close()
-    for i in users:
-        if str(user_id) in i:
-            # name_city = [i.split('----------')[1], i.split('----------')[2]]
-            name_city = i.split('----------')[-1]
-            print(name_city.rstrip())
-            return name_city.rstrip()
+    db_session.global_init(f'root:{os.getenv("PASSWORD_DATABASE")}@127.0.0.1:3306/weather_bot_db')
+    session = db_session.create_session()
+    spisok = []
+    for user in session.query(User).filter(User.telegram_id == user_id):
+        spisok.append(str(user))
+    print(spisok)
+    return ''.join(spisok).split('=')[2]
 
 
 class Weather:
