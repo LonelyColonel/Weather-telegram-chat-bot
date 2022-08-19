@@ -16,7 +16,6 @@ REQUEST_CITY, NAME_CITY, CHOOSING_MAIN, CHOOSING_WEATHER, CHOOSING_NOTIF, CHOOSI
 
 
 def check_users_in_db(id_user):
-    global db_session
     db_session.global_init(f'root:{os.getenv("PASSWORD_DATABASE")}@127.0.0.1:3306/weather_bot_db')
     session = db_session.create_session()
     user = session.query(User).filter(User.telegram_id == id_user).first()
