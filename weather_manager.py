@@ -49,8 +49,8 @@ class Weather:
         name_city = get_usr_coord(user)
         print('-----------')
         print(name_city)
-        what_weather = requests.get(f'https://api.openweathermap.org/data/2.5/weather?lang=ru&units=metric&q={name_city}&'
-                                    f'appid={os.getenv("API_KEY")}').json()
+        what_weather = requests.get(f'https://api.openweathermap.org/data/2.5/weather?lang=ru&units=metric&'
+                                    f'q={name_city}&appid={os.getenv("API_KEY")}').json()
         print(what_weather)
         sky = what_weather["weather"][0]["description"]
         temp = what_weather["main"]["temp"]
@@ -65,24 +65,24 @@ class Weather:
         date = what_weather["dt"]
         country = what_weather["sys"]["country"]
         text = f'{name_city} {country}\n-------------\nНа улице: {sky}\nТемпература: {temp} \U000000B0C\n' \
-               f'Ощущается как: {feels_like}\nВлажность: {hamidity}\nАтмосферное давление: {atmosphere}\n мм.рт.ст.' \
-               f'Видимость: {visibility} метров\nСкорость ветра: {wind_speed} м/с\n' \
-               f'Направление ветра: {wind_direction}\nОблачность: {clouds} %'
+               f'Ощущается как: {feels_like} \U000000B0C\nВлажность: {hamidity} %\nАтмосферное давление: ' \
+               f'{atmosphere} мм.рт.ст.\nВидимость: {visibility} метров\nСкорость ветра: {wind_speed} м/с\n' \
+               f'Направление ветра: {("штиль" if wind_speed == 0 else wind_direction)}\nОблачность: {clouds} %'
 
         update.message.reply_text(text=text)
 
     def weather_tomorrow(self, update, context):
         user = update.message.chat.id
         name_city = get_usr_coord(user)
-        weather = requests.get(f'https://api.openweathermap.org/data/2.5/forecast?q={name_city}&'
+        weather = requests.get(f'https://api.openweathermap.org/data/2.5/forecast?lang=ru&units=metric&q={name_city}&'
                                f'cnt=3&appid={os.getenv("API_KEY")}').json()
         with open('test_json.json', 'a', encoding='utf-8') as file:
             json.dump(weather, file)
-        # print(weather)
+
         update.message.reply_text(text='ok')
 
     def check_city(self, name_city: str):
-        checking = requests.get(f'http://api.openweathermap.org/geo/1.0/direct?q={name_city}&'
+        checking = requests.get(f'http://api.openweathermap.org/geo/1.0/direct?lang=ru&units=metric&q={name_city}&'
                                 f'limit=1&appid={os.getenv("API_KEY")}').json()
         coords = {}
         if checking:
@@ -95,8 +95,10 @@ class Weather:
     def get_name_city_by_coords(self, lon, lat):
         print(str(lat))
         print(str(lon))
-        request = requests.get(f'http://api.openweathermap.org/geo/1.0/reverse?lat={str(lat)}&lon={str(lon)}&'
-                               f'limit=1&appid={os.getenv("API_KEY")}')
-        return request.json()[0]['name']
-
-
+        request = requests.get(f'http://api.openweathermap.org/geo/1.0/reverse?lang=ru&units=metric&'
+                               f'lat={str(lat)}&lon={str(lon)}&limit=1&appid={os.getenv("API_KEY")}')
+        print(request.json())
+        try:
+            return request.json()[0]['local_names']['ru']
+        except:
+            return request.json()[0]['name']
